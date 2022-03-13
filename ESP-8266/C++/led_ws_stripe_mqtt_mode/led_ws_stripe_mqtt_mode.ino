@@ -279,7 +279,7 @@ void executeMode()
 
 //------------------- Modes ---------------
 
-void staticMode() // 83
+void staticMode()
 {
   if (currentLED[0] < (sizeof(leds) / sizeof(*leds)))
   {
@@ -289,13 +289,13 @@ void staticMode() // 83
   }
 }
 
-void gradientMode() // 71
+void gradientMode()
 {
   fill_gradient_RGB(leds, 0, state.colorList[0], NUM_LEDS - 1, state.colorList[1]);
   FastLED.show();
 }
 
-void blinkMode() // 66
+void blinkMode()
 {
   if (currentLED[0] != 0)
   {
@@ -314,7 +314,7 @@ void blinkMode() // 66
   FastLED.show();
 }
 
-void swipeBlinkMode() // 85
+void swipeBlinkMode()
 {
   if (currentLED[0] < (sizeof(leds) / sizeof(*leds)))
   {
@@ -381,7 +381,7 @@ void resetStripeForMode()
   fill_solid(leds, NUM_LEDS, state.colorList[2]);
 }
 
-void singleStripeMode() // 49
+void singleStripeMode()
 {
   int stripeSize = 10;
   int currentStripeTail = currentLED[0] - stripeSize;
