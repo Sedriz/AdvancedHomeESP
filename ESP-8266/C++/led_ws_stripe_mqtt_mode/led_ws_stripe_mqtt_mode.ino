@@ -11,37 +11,38 @@
 
 //-----------------------Constants----------------------------
 
-#define LED_PIN     h_outputPin
-#define NUM_LEDS    h_num_led
-#define LED_TYPE    WS2813
+#define LED_PIN h_outputPin
+#define NUM_LEDS h_num_led
+#define LED_TYPE WS2813
 #define COLOR_ORDER GRB
 
-#define NTP_OFFSET   60 * 60      // In seconds
-#define NTP_INTERVAL 60 * 1000    // In miliseconds
-#define NTP_ADDRESS  "europe.pool.ntp.org"
+#define NTP_OFFSET 60 * 60     // In seconds
+#define NTP_INTERVAL 60 * 1000 // In miliseconds
+#define NTP_ADDRESS "europe.pool.ntp.org"
 
 const String deviceID = h_device_id;
 
 // Network config:
-const char* ssid     = h_wifi_ssid;
-const char* password = h_wifi_password;
+const char *ssid = h_wifi_ssid;
+const char *password = h_wifi_password;
 
 // MQTT config:
-const char* MQTT_HOST = h_mqttbroker_host;
-const char* MQTT_CLIENT_ID = ("ESP8266Client" + deviceID).c_str();
-const char* MQTT_USER = h_mqtt_user;
-const char* MQTT_PASSWORD = h_mqtt_password;
+const char *MQTT_HOST = h_mqttbroker_host;
+const char *MQTT_CLIENT_ID = ("ESP8266Client" + deviceID).c_str();
+const char *MQTT_USER = h_mqtt_user;
+const char *MQTT_PASSWORD = h_mqtt_password;
 
 // Topic:
-const String commandTopic = "device/" +  deviceID + "/command";
-const String requestTopic = "device/" +  deviceID + "/request";
-const String pubTopic = "main/" + deviceID + "/1"; //Incomming topic id
+const String commandTopic = "device/" + deviceID + "/command";
+const String requestTopic = "device/" + deviceID + "/request";
+const String pubTopic = "main/" + deviceID + "/1"; // Incomming topic id
 
 State state;
 
 unsigned long previousMillisMode = 0;
-//unsigned long intervalMode = 1;
-//bool modeDone = false;
+// unsigned long intervalMode = 1;
+// bool modeDone = false;
+int currentLED = 0;
 
 //-----------------------------------------------------------
 
@@ -51,20 +52,19 @@ WiFiClient espClient;
 PubSubClient pubSubClient(espClient);
 CRGB leds[NUM_LEDS];
 
-
-
-void setup() {
+void setup()
+{
   Serial.begin(19200);
   Serial.println("Setting up!");
   timeClient.begin();
 
   // setup environments
   setup_mode();
-  //setup_fastLED();
+  setup_fastLED();
   setup_wifi();
   setup_mqtt();
 
-  //Send online state
+  // Send online state
   delay(1000);
   mqtt_publish_state();
 }
@@ -72,13 +72,13 @@ void setup() {
 void setup_mode()
 {
   Color color;
-  color.red = 200;
-  color.green = 200;
-  color.blue = 200;
+  color.red = 5;
+  color.green = 5;
+  color.blue = 5;
 
   state.mode = 'S';
   state.brightness = 100;
-  state.speed = 5000;
+  state.speed = 100;
   state.color = color;
 }
 
@@ -88,11 +88,13 @@ void setup_fastLED()
   Serial.println("FastLED activated!");
 }
 
-void setup_wifi() {
+void setup_wifi()
+{
   Serial.println("Connecting to WiFi: ");
   Serial.print(h_wifi_ssid);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(1000);
     Serial.print(".");
   }
@@ -101,7 +103,8 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-void setup_mqtt() {
+void setup_mqtt()
+{
   Serial.println("Setting up MQTT: ");
   Serial.println(MQTT_HOST);
   pubSubClient.setServer(MQTT_HOST, 1883);
@@ -109,19 +112,22 @@ void setup_mqtt() {
   Serial.println("Setup done MQTT");
 }
 
-void connect_mqtt() {
+void connect_mqtt()
+{
   Serial.println("Connecting to MQTT: ");
   Serial.println(MQTT_HOST);
 
-  if (!pubSubClient.connected()) {
+  if (!pubSubClient.connected())
+  {
     Serial.println("MQTT connecting");
-    while (!pubSubClient.connected()) {
+    while (!pubSubClient.connected())
+    {
       pubSubClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD);
       delay(1000);
       Serial.print("-");
     }
 
-    //Subscribe to topic
+    // Subscribe to topic
     pubSubClient.subscribe(commandTopic.c_str());
     pubSubClient.subscribe(requestTopic.c_str());
 
@@ -130,11 +136,13 @@ void connect_mqtt() {
   Serial.println("MQTT Connected");
 }
 
-void mqtt_publish_state() {  
-  if(!pubSubClient.connected()) {
+void mqtt_publish_state()
+{
+  if (!pubSubClient.connected())
+  {
     connect_mqtt();
   }
-  
+
   timeClient.update();
   DynamicJsonDocument pubdoc(1024);
   String pubJson;
@@ -157,13 +165,15 @@ void mqtt_publish_state() {
 }
 
 // On arriving message:
-void callback(char* topic, byte* message, unsigned int length) {
+void callback(char *topic, byte *message, unsigned int length)
+{
   Serial.println("---------------------------------------");
   Serial.print("Message arrived on topic: ");
   Serial.print(topic);
 
   String data;
-  for (int i = 0; i < length; i++) {
+  for (int i = 0; i < length; i++)
+  {
     data += (char)message[i];
   }
 
@@ -175,7 +185,6 @@ void callback(char* topic, byte* message, unsigned int length) {
 
   deserializeJson(doc, data);
 
-
   if (String(topic) == commandTopic)
   {
     state.mode = doc["mode"];
@@ -184,19 +193,24 @@ void callback(char* topic, byte* message, unsigned int length) {
     state.color.red = doc["color"]["r"];
     state.color.green = doc["color"]["g"];
     state.color.blue = doc["color"]["b"];
+    currentLED = 0;
   }
-  else if(String(topic) == requestTopic) {
+  else if (String(topic) == requestTopic)
+  {
     mqtt_publish_state();
   }
-  else {
+  else
+  {
     Serial.println("Error: wrong topic");
-  }  
+  }
 
   Serial.println("---------------------------------------");
 }
 
-void loop() {
-  if(!pubSubClient.connected()) {
+void loop()
+{
+  if (!pubSubClient.connected())
+  {
     connect_mqtt();
   }
   pubSubClient.loop();
@@ -207,41 +221,91 @@ void loop() {
     previousMillisMode = currentMillis;
     executeMode();
   }
+
+  //Serial.println(currentLED);
 }
 
-void executeMode() {
-  Serial.println(state.mode);
-  Serial.println(state.speed);
-  Serial.println(state.brightness);
-
+void executeMode()
+{
+  if (state.mode == 'S')
+  {
+    staticMode();
+  }
+  else if (state.mode == '1')
+  {
+    singleStripeMode();
+  }
+  else if (state.mode == 'G')
+  {
+    gradientMode();
+  }
+  
 }
 
 //------------------- Modes ---------------
 
-void staticMode() {
-
+void staticMode() //83
+{
+  if (currentLED < (sizeof(leds) / sizeof(*leds)))
+  {
+    leds[currentLED] = CRGB(state.color.red, state.color.green, state.color.blue);
+    FastLED.show();
+    currentLED++;
+  }
 }
 
-void blinkMode() {
-
+void gradientMode()
+{
+  if (currentLED < (sizeof(leds) / sizeof(*leds)))
+  {
+    fill_gradient(leds, 0, CHSV(0,25,25), NUM_LEDS-1, CHSV(13,25,25), SHORTEST_HUES);
+    FastLED.show();
+    currentLED++;
+  }
 }
 
-void rainbowMode() {
-
+void blinkMode()
+{
 }
 
-void meetMode() {
-
+void rainbowMode()
+{
 }
 
-void singleStripeMode() {
-
+void meetMode()
+{
 }
 
-void multistripeMode() {
+void singleStripeMode() //49
+{
+  int ledsSize = (sizeof(leds) / sizeof(*leds));
+  int stripeSize = 5;
+  int currentStripeTail = currentLED - stripeSize;
+  if (currentLED < (ledsSize + stripeSize))
+  {
+    if (currentLED < ledsSize)
+    {
+      leds[currentLED] = CRGB(state.color.red, state.color.green, state.color.blue);
+    }
 
+    if (currentStripeTail > 0 ) 
+    {
+      leds[currentStripeTail] = CRGB::Black;
+    }
+    currentLED++;
+    FastLED.show();
+    
+  }
+  else
+  {
+    currentLED = 0;
+  }
 }
 
-void startsMode() {
+void multistripeMode()
+{
+}
 
+void startsMode()
+{
 }
