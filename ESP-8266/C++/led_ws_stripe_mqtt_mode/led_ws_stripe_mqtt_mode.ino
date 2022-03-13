@@ -11,7 +11,6 @@
 #include <cstdlib>
 #include "local_config.h"
 #include "State.h"
-#include "ModeEnum.h"
 #include <FS.h>
 #include <map>
 
@@ -50,7 +49,7 @@ double currentLED[] = {0, 0, 0, 0, 0};
 
 const char *filename = "/savedState.json";
 
-std::map<std::int, void (*)()> modeMap;
+std::map<int, void (*)()> modeMap;
 
 //-----------------------------------------------------------
 
@@ -202,7 +201,7 @@ void defaultState() {
   CRGB color1(170, 80, 0);
   CRGB color2(50, 0, 0);
 
-  state.mode = 1;
+  state.mode = 2;
   state.brightness = 100;
   state.speed = 50;
   state.colorVector = {color1, color2};
@@ -354,7 +353,7 @@ void loop()
   if (currentMillis >= previousMillisMode + state.speed)
   {
     previousMillisMode = currentMillis;
-    modeMap.at(state.mode);
+    modeMap.at(state.mode)();
   }
 }
 
