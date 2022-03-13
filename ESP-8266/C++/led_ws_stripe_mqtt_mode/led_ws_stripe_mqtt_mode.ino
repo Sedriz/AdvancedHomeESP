@@ -375,6 +375,10 @@ void executeMode()
   {
     starsMode();
   }
+  else if (state.mode == 9)
+  {
+    rainbowMode();
+  }
 }
 
 //------------------- Modes ---------------
@@ -431,6 +435,20 @@ void swipeBlinkMode()
 
 void rainbowMode()
 {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CHSV(i - ((int)currentLED[0] * 2), 255, 50); /* Saturation + brightness to var */ 
+  }
+
+  if (((int)currentLED[0]) < 255)
+  {
+    currentLED[0]++;
+  }
+  else {
+    currentLED[0] = 0;
+  }
+  
+
+  FastLED.show();
 }
 
 void meetMode()
