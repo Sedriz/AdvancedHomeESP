@@ -93,7 +93,7 @@ void setup_spiffs()
 void setup_fastLED()
 {
   Serial.println("Setting up FastLED!");
-  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
   Serial.println("FastLED activated!");
 }
 
@@ -395,11 +395,11 @@ void blinkMode()
 {
   if (currentLED[0] != 0)
   {
-    // int random_integer;
-    // int lowest = 1, highest = state.colorList.size();
-    // int range = (highest - lowest) + 1;
-    // random_integer = lowest + rand() % range;
-    fill_solid(leds, NUM_LEDS, state.colorList[1]);
+    int random_integer;
+    int lowest = 1, highest = state.colorList.size();
+    int range = (highest - lowest) + 1;
+    random_integer = lowest + rand() % range;
+    fill_solid(leds, NUM_LEDS, state.colorList[random_integer]);
     currentLED[0] = 0;
   }
   else
