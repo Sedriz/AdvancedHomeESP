@@ -66,9 +66,9 @@ void setup()
   // setup environments
   setup_spiffs();
   readSavedState();
-  setup_fastLED();
   setup_wifi();
   setup_mqtt();
+  setup_fastLED();
 
   // Send online state
   delay(1000);
@@ -77,6 +77,7 @@ void setup()
 
 void setup_spiffs()
 {
+  Serial.println("Setting up Spiffs!");
   bool success = SPIFFS.begin();
   if (success)
   {
@@ -91,6 +92,7 @@ void setup_spiffs()
 
 void setup_fastLED()
 {
+  Serial.println("Setting up FastLED!");
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   Serial.println("FastLED activated!");
 }
@@ -150,7 +152,7 @@ void readSavedState()
 
   if (!file)
   {
-    Serial.println("Failed to open file for reading");
+    defaultState();
     return;
   }
 
@@ -162,20 +164,31 @@ void readSavedState()
 
   if (data != "")
   {
-    readJSON(data);
+    try {
+      readJSON(data);
+    }
+    catch (...) {
+      defaultState();
+    }
   }
   else
   {
-    CRGB color1(170, 80, 0);
-    CRGB color2(50, 0, 0);
-
-    state.mode = 1;
-    state.brightness = 100;
-    state.speed = 50;
-    state.colorList = {color1, color2};
+    defaultState();
   }
 
   file.close();
+}
+
+void defaultState() {
+  Serial.println("Failed to open file for reading");
+
+  CRGB color1(170, 80, 0);
+  CRGB color2(50, 0, 0);
+
+  state.mode = 1;
+  state.brightness = 100;
+  state.speed = 50;
+  state.colorList = {color1, color2};
 }
 
 void mqtt_publish_state()
