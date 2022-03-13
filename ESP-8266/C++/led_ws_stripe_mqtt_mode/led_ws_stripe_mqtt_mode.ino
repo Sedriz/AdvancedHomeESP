@@ -239,7 +239,7 @@ void multiStaticColor()
   }
 }
 
-std::vector<void (*)()> modeMap = {
+std::vector<void (*)()> modeVector = {
     &multiStaticColor,
     &gradientMode,
     &blinkMode,
@@ -536,7 +536,7 @@ void loop()
     previousMillisMode = currentMillis;
 
     try {
-      modeMap[state.mode]();
+      modeVector[state.mode]();
     }
     catch(...) {
       Serial.println("Error: while executing mode!");

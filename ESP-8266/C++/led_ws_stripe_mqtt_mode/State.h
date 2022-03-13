@@ -3,9 +3,7 @@
 #include <iostream>
 
 class State
-{
-private:
-    
+{   
 public:
     int mode;
     int speed;
