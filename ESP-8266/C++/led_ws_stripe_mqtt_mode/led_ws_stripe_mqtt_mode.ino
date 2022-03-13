@@ -48,7 +48,6 @@ double currentLED[] = {0, 0, 0, 0, 0};
 
 const char *filename = "/savedState.json";
 
-
 //-----------------------------------------------------------
 
 WiFiUDP ntpUDP;
@@ -66,7 +65,7 @@ void setup()
 
   // setup environments
   setup_spiffs();
-  setup_mode();
+  readSavedState();
   setup_fastLED();
   setup_wifi();
   setup_mqtt();
@@ -74,19 +73,6 @@ void setup()
   // Send online state
   delay(1000);
   mqtt_publish_state();
-}
-
-void setup_mode()
-{
-  readSavedState();
-
-  CRGB color1(170, 80, 0);
-  CRGB color2(50, 0, 0);
-
-  state.mode = 1;
-  state.brightness = 100;
-  state.speed = 50;
-  state.colorList = {color1, color2};
 }
 
 void setup_spiffs()
@@ -167,11 +153,27 @@ void readSavedState()
     return;
   }
 
-  while (file.available()) {
- 
-    Serial.write(file.read());
+  String data;
+  while (file.available())
+  {
+    data += (char)file.read();
   }
- 
+
+  if (data != "")
+  {
+    readJSON(data);
+  }
+  else
+  {
+    CRGB color1(170, 80, 0);
+    CRGB color2(50, 0, 0);
+
+    state.mode = 1;
+    state.brightness = 100;
+    state.speed = 50;
+    state.colorList = {color1, color2};
+  }
+
   file.close();
 }
 
@@ -182,9 +184,45 @@ void mqtt_publish_state()
     connect_mqtt();
   }
 
+  pubSubClient.publish(pubTopic.c_str(), createJSON().c_str());
+
+  Serial.println();
+  Serial.println("Pushed State to topic:");
+  Serial.println(pubTopic);
+  Serial.println();
+}
+
+void writeToFile()
+{
+  File file = SPIFFS.open(filename, "w");
+
+  if (!file)
+  {
+    Serial.println("Error opening file for writing");
+    return;
+  }
+
+  int bytesWritten = file.print(createJSON().c_str());
+
+  if (bytesWritten > 0)
+  {
+    Serial.println("File was written");
+    Serial.println(bytesWritten);
+  }
+  else
+  {
+    Serial.println("File write failed");
+  }
+
+  file.close();
+}
+
+String createJSON()
+{
+  String pubJson;
+
   timeClient.update();
   DynamicJsonDocument pubdoc(1024);
-  String pubJson;
 
   pubdoc["timestamp"] = timeClient.getEpochTime();
   pubdoc["mode"] = state.mode;
@@ -203,38 +241,33 @@ void mqtt_publish_state()
   }
 
   serializeJson(pubdoc, pubJson);
-
-  pubSubClient.publish(pubTopic.c_str(), pubJson.c_str());
-
-  Serial.println();
-  Serial.println("Pushed State to topic:");
-  Serial.println(pubTopic);
-  Serial.println();
+  return pubJson;
 }
 
-void writeToFile()
+void readJSON(String data)
 {
-  File file = SPIFFS.open(filename, "w");
+  DynamicJsonDocument doc(1024);
 
-  if (!file)
+  deserializeJson(doc, data);
+
+  state.mode = doc["mode"];
+  state.brightness = doc["brightness"];
+  state.speed = doc["speed"];
+
+  state.specialPointList = {};
+
+  for (int i = 0; i < doc["specialPointList"].size(); i++)
   {
-    Serial.println("Error opening file for writing");
-    return;
+    state.specialPointList.push_back(doc["specialPointList"][i]);
   }
 
-  int bytesWritten = file.print("TEST SPIFFS");
+  state.colorList = {};
 
-  if (bytesWritten > 0)
+  for (int i = 0; i < doc["colorList"].size(); i++)
   {
-    Serial.println("File was written");
-    Serial.println(bytesWritten);
+    CRGB color(doc["colorList"][i]["r"], doc["colorList"][i]["g"], doc["colorList"][i]["b"]);
+    state.colorList.push_back(color);
   }
-  else
-  {
-    Serial.println("File write failed");
-  }
-
-  file.close();
 }
 
 // On arriving message:
@@ -254,30 +287,9 @@ void callback(char *topic, byte *message, unsigned int length)
   Serial.print(data);
   Serial.println();
 
-  DynamicJsonDocument doc(1024);
-
-  deserializeJson(doc, data);
-
   if (String(topic) == commandTopic)
   {
-    state.mode = doc["mode"];
-    state.brightness = doc["brightness"];
-    state.speed = doc["speed"];
-
-    state.specialPointList = {};
-
-    for (int i = 0; i < doc["specialPointList"].size(); i++)
-    {
-      state.specialPointList.push_back(doc["specialPointList"][i]);
-    }
-
-    state.colorList = {};
-
-    for (int i = 0; i < doc["colorList"].size(); i++)
-    {
-      CRGB color(doc["colorList"][i]["r"], doc["colorList"][i]["g"], doc["colorList"][i]["b"]);
-      state.colorList.push_back(color);
-    }
+    readJSON(data);
 
     currentLED[0] = 0;
     currentLED[1] = 0;
