@@ -16,15 +16,6 @@
 
 //-----------------------Constants----------------------------
 
-#define LED_PIN h_outputPin
-#define NUM_LEDS h_num_led
-#define LED_TYPE WS2813
-#define COLOR_ORDER GRB
-
-#define NTP_OFFSET 60 * 60     // In seconds
-#define NTP_INTERVAL 60 * 1000 // In miliseconds
-#define NTP_ADDRESS "europe.pool.ntp.org"
-
 const String deviceID = h_device_id;
 
 // Network config:
@@ -57,13 +48,16 @@ WiFiClient espClient;
 PubSubClient pubSubClient(espClient);
 CRGB leds[NUM_LEDS];
 
-
 //------------------- Modes ---------------
 
 void gradientMode()
 {
-  fill_gradient_RGB(leds, 0, state.colorVector[0], NUM_LEDS - 1, state.colorVector[1]);
-  FastLED.show(); //not display every time
+  if (currentLED[0] == 0)
+  {
+    fill_gradient_RGB(leds, 0, state.colorVector[0], NUM_LEDS - 1, state.colorVector[1]);
+    FastLED.show();
+    currentLED[0] = 1;
+  }
 }
 
 void blinkMode()
@@ -102,15 +96,17 @@ void swipeBlinkMode()
 
 void rainbowMode()
 {
-  for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CHSV(i - ((int)currentLED[0] * 2), state.additionalNumberVector[0], state.additionalNumberVector[1]); 
+  for (int i = 0; i < NUM_LEDS; i++)
+  {
+    leds[i] = CHSV(i - ((int)currentLED[0] * 2), state.additionalNumberVector[0], state.additionalNumberVector[1]);
   }
 
   if (((int)currentLED[0]) < 255)
   {
     currentLED[0]++;
   }
-  else {
+  else
+  {
     currentLED[0] = 0;
   }
   FastLED.show();
@@ -199,13 +195,13 @@ void starsMode()
   for (int i = 0; i < state.additionalNumberVector[0]; i++)
   {
     int random_integer;
-    int lowest = 1, highest = NUM_LEDS -1;
+    int lowest = 1, highest = NUM_LEDS - 1;
     int range = (highest - lowest) + 1;
     random_integer = lowest + rand() % range;
 
-    leds[random_integer -1] = state.colorVector[1];
+    leds[random_integer - 1] = state.colorVector[1];
     leds[random_integer] = state.colorVector[1];
-    leds[random_integer +1] = state.colorVector[1];
+    leds[random_integer + 1] = state.colorVector[1];
   }
 
   FastLED.show();
@@ -215,37 +211,43 @@ void multiStaticColor()
 {
   if (currentLED[0] < NUM_LEDS)
   {
-    if (currentLED[0] < state.additionalNumberVector[0])
+    if (state.additionalNumberVector.size() > 0)
+    {
+      if (currentLED[0] < state.additionalNumberVector[0])
+      {
+        leds[(int)currentLED[0]] = state.colorVector[0];
+      }
+
+      for (int i = 0; i < state.additionalNumberVector.size(); i++)
+      {
+        int point = state.additionalNumberVector[i];
+        int nextPoint = state.additionalNumberVector[i + 1];
+        if (currentLED[0] >= point && currentLED[0] < nextPoint)
+        {
+          leds[(int)currentLED[0]] = state.colorVector[i + 1];
+          break;
+        }
+      }
+    }
+    else
     {
       leds[(int)currentLED[0]] = state.colorVector[0];
     }
-    
-    for (int i = 0; i < state.additionalNumberVector.size(); i++)
-    {
-      int point = state.additionalNumberVector[i];
-      int nextPoint = state.additionalNumberVector[i+1];
-      if (currentLED[0] >= point && currentLED[0] < nextPoint)
-      {
-        leds[(int)currentLED[0]] = state.colorVector[i+1];
-        break;
-      }
-    }
-    
+
     FastLED.show();
     currentLED[0]++;
   }
 }
 
 std::vector<void (*)()> modeMap = {
-  &multiStaticColor, 
-  &gradientMode, 
-  &blinkMode,  
-  &swipeBlinkMode, 
-  &rainbowMode, 
-  &meetMode, 
-  &singleStripeMode, 
-  &starsMode
-};
+    &multiStaticColor,
+    &gradientMode,
+    &blinkMode,
+    &swipeBlinkMode,
+    &rainbowMode,
+    &meetMode,
+    &singleStripeMode,
+    &starsMode};
 
 void setup()
 {
@@ -255,7 +257,6 @@ void setup()
   srand(time(0));
 
   // setup environments
-  //setupModeMap();
   setup_spiffs();
   readSavedState();
   setup_wifi();
@@ -265,18 +266,6 @@ void setup()
   // Send online state
   delay(1000);
   mqtt_publish_state();
-}
-
-void setupModeMap() {
-  modeMap[1] = &multiStaticColor;
-  modeMap[2] = &gradientMode;
-  modeMap[3] = &blinkMode;
-  modeMap[4] = &swipeBlinkMode;
-  modeMap[5] = &rainbowMode;
-  modeMap[6] = &meetMode;
-  modeMap[7] = &resetStripeForMode;
-  modeMap[8] = &singleStripeMode;
-  modeMap[9] = &starsMode;
 }
 
 void setup_spiffs()
@@ -368,10 +357,12 @@ void readSavedState()
 
   if (data != "")
   {
-    try {
+    try
+    {
       readJSON(data);
     }
-    catch (...) {
+    catch (...)
+    {
       defaultState();
     }
   }
@@ -383,16 +374,18 @@ void readSavedState()
   file.close();
 }
 
-void defaultState() {
+void defaultState()
+{
   Serial.println("Failed to open file for reading");
 
   CRGB color1(170, 80, 0);
   CRGB color2(50, 0, 0);
 
-  state.mode = 2;
+  state.mode = 0;
   state.brightness = 100;
   state.speed = 50;
-  state.colorVector = {color1, color2};
+  state.colorVector = { color1, color2 };
+  state.additionalNumberVector = { 10 };
 }
 
 void mqtt_publish_state()
@@ -541,6 +534,12 @@ void loop()
   if (currentMillis >= previousMillisMode + state.speed)
   {
     previousMillisMode = currentMillis;
-    modeMap[state.mode]();
+
+    try {
+      modeMap[state.mode]();
+    }
+    catch(...) {
+      Serial.println("Error: while executing mode!");
+    }
   }
 }
