@@ -43,12 +43,12 @@ const String pubTopic = "main/" + deviceID + "/1"; // Incomming topic id
 State state;
 
 unsigned long previousMillisMode = 0;
-int currentLED = 0;
+double currentLED[] = {0, 0, 0, 0, 0};
 
 //-----------------------------------------------------------
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL); //CRGB destroy? not more than 2 colors possible?
+NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL); // CRGB destroy? not more than 2 colors possible? For single stripe first one in stripe color! Mode to show multiple colors!
 WiFiClient espClient;
 PubSubClient pubSubClient(espClient);
 CRGB leds[NUM_LEDS];
@@ -73,12 +73,12 @@ void setup()
 
 void setup_mode()
 {
-  CRGB color1(5, 5, 5);
+  CRGB color1(170, 80, 0);
   CRGB color2(50, 0, 0);
 
-  state.mode = 'U';
+  state.mode = 1;
   state.brightness = 100;
-  state.speed = 100;
+  state.speed = 50;
   state.colorList = {color1, color2};
 }
 
@@ -151,9 +151,14 @@ void mqtt_publish_state()
   pubdoc["mode"] = state.mode;
   pubdoc["speed"] = state.speed;
 
+  for (int i = 0; i < state.specialPointList.size(); i++)
+  {
+    pubdoc["specialPointList"][i] = state.specialPointList[i];
+  }
+
   for (int i = 0; i < state.colorList.size(); i++)
   {
-    pubdoc["colorList"][i]["r"] = state.colorList[i].red; // do
+    pubdoc["colorList"][i]["r"] = state.colorList[i].red;
     pubdoc["colorList"][i]["g"] = state.colorList[i].green;
     pubdoc["colorList"][i]["b"] = state.colorList[i].blue;
   }
@@ -195,6 +200,13 @@ void callback(char *topic, byte *message, unsigned int length)
     state.brightness = doc["brightness"];
     state.speed = doc["speed"];
 
+    state.specialPointList = {};
+
+    for (int i = 0; i < doc["specialPointList"].size(); i++)
+    {
+      state.specialPointList.push_back(doc["specialPointList"][i]);
+    }
+
     state.colorList = {};
 
     for (int i = 0; i < doc["colorList"].size(); i++)
@@ -203,7 +215,11 @@ void callback(char *topic, byte *message, unsigned int length)
       state.colorList.push_back(color);
     }
 
-    currentLED = 0;
+    currentLED[0] = 0;
+    currentLED[1] = 0;
+    currentLED[2] = 0;
+    currentLED[3] = 0;
+    currentLED[4] = 0;
   }
   else if (String(topic) == requestTopic)
   {
@@ -231,31 +247,33 @@ void loop()
     previousMillisMode = currentMillis;
     executeMode();
   }
-
-  // Serial.println(currentLED);
 }
 
 void executeMode()
 {
-  if (state.mode == 'S')
+  if (state.mode == 1)
   {
     staticMode();
   }
-  else if (state.mode == '1')
+  else if (state.mode == 2)
   {
     singleStripeMode();
   }
-  else if (state.mode == 'G')
+  else if (state.mode == 3)
   {
     gradientMode();
   }
-  else if (state.mode == 'B')
+  else if (state.mode == 4)
   {
     blinkMode();
   }
-  else if (state.mode == 'U')
+  else if (state.mode == 5)
   {
     swipeBlinkMode();
+  }
+  else if (state.mode == 6)
+  {
+    meetMode();
   }
 }
 
@@ -263,11 +281,11 @@ void executeMode()
 
 void staticMode() // 83
 {
-  if (currentLED < (sizeof(leds) / sizeof(*leds)))
+  if (currentLED[0] < (sizeof(leds) / sizeof(*leds)))
   {
-    leds[currentLED] = state.colorList[0];
+    leds[(int)currentLED[0]] = state.colorList[0];
     FastLED.show();
-    currentLED++;
+    currentLED[0]++;
   }
 }
 
@@ -279,33 +297,34 @@ void gradientMode() // 71
 
 void blinkMode() // 66
 {
-  if (currentLED != 0)
+  if (currentLED[0] != 0)
   {
     // int random_integer;
     // int lowest = 1, highest = state.colorList.size();
     // int range = (highest - lowest) + 1;
     // random_integer = lowest + rand() % range;
     fill_solid(leds, NUM_LEDS, state.colorList[1]);
-    currentLED = 0;
+    currentLED[0] = 0;
   }
   else
   {
     fill_solid(leds, NUM_LEDS, state.colorList[0]); // First color
-    currentLED = 1;
+    currentLED[0] = 1;
   }
   FastLED.show();
 }
 
 void swipeBlinkMode() // 85
 {
-  if (currentLED < (sizeof(leds) / sizeof(*leds)))
+  if (currentLED[0] < (sizeof(leds) / sizeof(*leds)))
   {
-    leds[currentLED] = state.colorList[1];
-    currentLED++;
+    leds[(int)currentLED[0]] = state.colorList[1];
+    currentLED[0]++;
   }
-  else {
+  else
+  {
     fill_solid(leds, NUM_LEDS, state.colorList[0]);
-    currentLED = 0;
+    currentLED[0] = 0;
   }
   FastLED.show();
 }
@@ -316,37 +335,84 @@ void rainbowMode()
 
 void meetMode()
 {
+  int meetingPoint = state.specialPointList[0];
+  int speed = 15;
+  int zeroToPoint = meetingPoint;
+  int lastToPoint = NUM_LEDS - meetingPoint;
+
+  double speedZeroToPoint = (double)zeroToPoint / speed;
+  double speedLastToPoint = (double)lastToPoint / speed;
+
+  if (currentLED[1] < meetingPoint)
+  {
+    resetStripeForMode();
+  }
+
+  int currentZeroToPoint = currentLED[0];
+  int currentLastToPoint = currentLED[1];
+
+  if (currentZeroToPoint <= meetingPoint)
+  {
+    leds[currentZeroToPoint] = state.colorList[0];
+    currentLED[0] = currentLED[0] + speedZeroToPoint;
+  }
+  else
+  {
+    resetStripeForMode();
+  }
+
+  if (currentLastToPoint > meetingPoint)
+  {
+    leds[currentLastToPoint] = state.colorList[1];
+    currentLED[1] = currentLED[1] - speedLastToPoint;
+  }
+  else
+  {
+    resetStripeForMode();
+  }
+
+  FastLED.show();
+}
+
+void resetStripeForMode()
+{
+  currentLED[0] = 0;
+  currentLED[1] = NUM_LEDS;
+  fill_solid(leds, NUM_LEDS, state.colorList[2]);
 }
 
 void singleStripeMode() // 49
 {
-  int ledsSize = (sizeof(leds) / sizeof(*leds));
-  int stripeSize = 5;
-  int currentStripeTail = currentLED - stripeSize;
-  if (currentLED < (ledsSize + stripeSize))
+  int stripeSize = 10;
+  int currentStripeTail = currentLED[0] - stripeSize;
+  if (currentLED[0] < (NUM_LEDS + stripeSize))
   {
-    if (currentLED < ledsSize)
+    if (currentLED[0] < NUM_LEDS)
     {
-      leds[currentLED] = state.colorList[0];
+      leds[(int)currentLED[0]] = state.colorList[0];
     }
 
     if (currentStripeTail > 0)
     {
       leds[currentStripeTail] = state.colorList[1];
     }
-    currentLED++;
+    currentLED[0]++;
     FastLED.show();
   }
   else
   {
-    currentLED = 0;
+    currentLED[0] = 0;
   }
 }
 
-void multistripeMode()
+void multiStripeMode()
 {
 }
 
 void starsMode()
+{
+}
+
+void multiStaticColor()
 {
 }
