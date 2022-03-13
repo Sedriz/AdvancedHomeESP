@@ -1,7 +1,8 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-
+#include <vector>
+#include <iostream>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <sstream>
@@ -40,14 +41,12 @@ const String pubTopic = "main/" + deviceID + "/1"; // Incomming topic id
 State state;
 
 unsigned long previousMillisMode = 0;
-// unsigned long intervalMode = 1;
-// bool modeDone = false;
 int currentLED = 0;
 
 //-----------------------------------------------------------
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
+NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL); // Vector. Bisher nur vom ertsen genommen. Bei callback auch nur das erste gelsen. Fehler beim LEsen vermutlich nicht richtig einlesen. Color wird jedes mal neu erstellt schaurn wegen destroy
 WiFiClient espClient;
 PubSubClient pubSubClient(espClient);
 CRGB leds[NUM_LEDS];
@@ -79,7 +78,7 @@ void setup_mode()
   state.mode = 'S';
   state.brightness = 100;
   state.speed = 100;
-  state.color = color;
+  state.colorList = {color};
 }
 
 void setup_fastLED()
@@ -150,9 +149,13 @@ void mqtt_publish_state()
   pubdoc["timestamp"] = timeClient.getEpochTime();
   pubdoc["mode"] = state.mode;
   pubdoc["speed"] = state.speed;
-  pubdoc["color"]["r"] = state.color.red;
-  pubdoc["color"]["g"] = state.color.green;
-  pubdoc["color"]["b"] = state.color.blue;
+
+  for (int i = 0; i < state.colorList.size(); i++)
+  {
+    pubdoc["colorList"][i]["r"] = state.colorList[i].red;
+    pubdoc["colorList"][i]["g"] = state.colorList[i].green;
+    pubdoc["colorList"][i]["b"] = state.colorList[i].blue;
+  }
 
   serializeJson(pubdoc, pubJson);
 
@@ -190,9 +193,14 @@ void callback(char *topic, byte *message, unsigned int length)
     state.mode = doc["mode"];
     state.brightness = doc["brightness"];
     state.speed = doc["speed"];
-    state.color.red = doc["color"]["r"];
-    state.color.green = doc["color"]["g"];
-    state.color.blue = doc["color"]["b"];
+
+    Color color;
+    color.red = doc["color"]["r"]; // get color list
+    color.green = doc["color"]["g"];
+    color.blue = doc["color"]["b"];
+
+    state.colorList = {color};
+
     currentLED = 0;
   }
   else if (String(topic) == requestTopic)
@@ -222,7 +230,7 @@ void loop()
     executeMode();
   }
 
-  //Serial.println(currentLED);
+  // Serial.println(currentLED);
 }
 
 void executeMode()
@@ -239,16 +247,15 @@ void executeMode()
   {
     gradientMode();
   }
-  
 }
 
 //------------------- Modes ---------------
 
-void staticMode() //83
+void staticMode() // 83
 {
   if (currentLED < (sizeof(leds) / sizeof(*leds)))
   {
-    leds[currentLED] = CRGB(state.color.red, state.color.green, state.color.blue);
+    leds[currentLED] = CRGB(state.colorList[0].red, state.colorList[0].green, state.colorList[0].blue);
     FastLED.show();
     currentLED++;
   }
@@ -258,7 +265,7 @@ void gradientMode()
 {
   if (currentLED < (sizeof(leds) / sizeof(*leds)))
   {
-    fill_gradient(leds, 0, CHSV(0,25,25), NUM_LEDS-1, CHSV(13,25,25), SHORTEST_HUES);
+    fill_gradient(leds, 0, CHSV(0, 25, 25), NUM_LEDS - 1, CHSV(13, 25, 25), SHORTEST_HUES);
     FastLED.show();
     currentLED++;
   }
@@ -276,7 +283,7 @@ void meetMode()
 {
 }
 
-void singleStripeMode() //49
+void singleStripeMode() // 49
 {
   int ledsSize = (sizeof(leds) / sizeof(*leds));
   int stripeSize = 5;
@@ -285,16 +292,15 @@ void singleStripeMode() //49
   {
     if (currentLED < ledsSize)
     {
-      leds[currentLED] = CRGB(state.color.red, state.color.green, state.color.blue);
+      leds[currentLED] = CRGB(state.colorList[0].red, state.colorList[0].green, state.colorList[0].blue);
     }
 
-    if (currentStripeTail > 0 ) 
+    if (currentStripeTail > 0)
     {
       leds[currentStripeTail] = CRGB::Black;
     }
     currentLED++;
     FastLED.show();
-    
   }
   else
   {

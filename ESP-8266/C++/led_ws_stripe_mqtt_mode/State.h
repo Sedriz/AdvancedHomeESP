@@ -1,4 +1,6 @@
 #include "Color.h"
+#include <vector>
+#include <iostream>
 
 class State
 {
@@ -8,6 +10,7 @@ public:
     char mode;
     int speed;
     int brightness;
-    Color color;
+    std::vector<Color> colorList;
+    std::vector<Color>::iterator it;
 };
 
