@@ -196,7 +196,7 @@ void callback(char *topic, byte *message, unsigned int length)
 
     for (int i = 0; i < doc["colorList"].size(); i++)
     {
-      CRGB color(doc["colorList"][0]["r"], doc["colorList"][0]["g"], doc["colorList"][0]["b"]);
+      CRGB color(doc["colorList"][i]["r"], doc["colorList"][i]["g"], doc["colorList"][i]["b"]);
       state.colorList.push_back(color);
     }
 
