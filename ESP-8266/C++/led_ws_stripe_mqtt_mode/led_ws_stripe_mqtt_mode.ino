@@ -11,7 +11,9 @@
 #include <cstdlib>
 #include "local_config.h"
 #include "State.h"
+#include "ModeEnum.h"
 #include <FS.h>
+#include <map>
 
 //-----------------------Constants----------------------------
 
@@ -48,6 +50,8 @@ double currentLED[] = {0, 0, 0, 0, 0};
 
 const char *filename = "/savedState.json";
 
+std::map<std::int, void (*)()> modeMap;
+
 //-----------------------------------------------------------
 
 WiFiUDP ntpUDP;
@@ -64,6 +68,7 @@ void setup()
   srand(time(0));
 
   // setup environments
+  setupModeMap();
   setup_spiffs();
   readSavedState();
   setup_wifi();
@@ -73,6 +78,19 @@ void setup()
   // Send online state
   delay(1000);
   mqtt_publish_state();
+}
+
+void setupModeMap() {
+  modeMap[1] = &staticMode;
+  modeMap[2] = &gradientMode;
+  modeMap[3] = &blinkMode;
+  modeMap[4] = &swipeBlinkMode;
+  modeMap[5] = &rainbowMode;
+  modeMap[6] = &meetMode;
+  modeMap[7] = &resetStripeForMode;
+  modeMap[8] = &singleStripeMode;
+  modeMap[9] = &starsMode;
+  modeMap[10] = &multiStaticColor;
 }
 
 void setup_spiffs()
@@ -337,47 +355,7 @@ void loop()
   if (currentMillis >= previousMillisMode + state.speed)
   {
     previousMillisMode = currentMillis;
-    executeMode();
-  }
-}
-
-void executeMode()
-{
-  if (state.mode == 1)
-  {
-    staticMode();
-  }
-  else if (state.mode == 2)
-  {
-    singleStripeMode();
-  }
-  else if (state.mode == 3)
-  {
-    gradientMode();
-  }
-  else if (state.mode == 4)
-  {
-    blinkMode();
-  }
-  else if (state.mode == 5)
-  {
-    swipeBlinkMode();
-  }
-  else if (state.mode == 6)
-  {
-    meetMode();
-  }
-  else if (state.mode == 7)
-  {
-    multiStaticColor();
-  }
-  else if (state.mode == 8)
-  {
-    starsMode();
-  }
-  else if (state.mode == 9)
-  {
-    rainbowMode();
+    modeMap.at(state.mode);
   }
 }
 
