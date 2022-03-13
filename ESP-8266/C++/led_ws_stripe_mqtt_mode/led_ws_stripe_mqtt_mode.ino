@@ -148,12 +148,12 @@ void mqtt_publish_state()
   pubdoc["mode"] = state.mode;
   pubdoc["speed"] = state.speed;
 
-  // for (int i = 0; i < state.colorList.size(); i++)
-  // {
-  //   pubdoc["colorList"][i]["r"] = state.colorList[i].red; //do
-  //   pubdoc["colorList"][i]["g"] = state.colorList[i].green;
-  //   pubdoc["colorList"][i]["b"] = state.colorList[i].blue;
-  // }
+  for (int i = 0; i < state.colorList.size(); i++)
+  {
+    pubdoc["colorList"][i]["r"] = state.colorList[i].red; //do
+    pubdoc["colorList"][i]["g"] = state.colorList[i].green;
+    pubdoc["colorList"][i]["b"] = state.colorList[i].blue;
+  }
 
   serializeJson(pubdoc, pubJson);
 
