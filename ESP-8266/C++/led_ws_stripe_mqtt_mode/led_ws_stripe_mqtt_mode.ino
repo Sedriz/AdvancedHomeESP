@@ -1,0 +1,212 @@
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+#include <sstream>
+#include <FastLED.h>
+#include "local_config.h"
+#include "State.h"
+
+//-----------------------Constants----------------------------
+
+#define LED_PIN     h_outputPin
+#define NUM_LEDS    h_num_led
+#define LED_TYPE    WS2813
+#define COLOR_ORDER GRB
+
+#define NTP_OFFSET   60 * 60      // In seconds
+#define NTP_INTERVAL 60 * 1000    // In miliseconds
+#define NTP_ADDRESS  "europe.pool.ntp.org"
+
+const String deviceID = h_device_id;
+
+// Network config:
+const char* ssid     = h_wifi_ssid;
+const char* password = h_wifi_password;
+
+// MQTT config:
+const char* MQTT_HOST = h_mqttbroker_host;
+const char* MQTT_CLIENT_ID = ("ESP8266Client" + deviceID).c_str();
+const char* MQTT_USER = h_mqtt_user;
+const char* MQTT_PASSWORD = h_mqtt_password;
+
+// Topic:
+const String commandTopic = "device/" +  deviceID + "/command";
+const String requestTopic = "device/" +  deviceID + "/request";
+const String pubTopic = "main/" + deviceID + "/1";
+
+State state;
+
+unsigned long previousMillisMode = 0;
+//unsigned long intervalMode = 1;
+//bool modeDone = false;
+
+//-----------------------------------------------------------
+
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
+WiFiClient espClient;
+PubSubClient pubSubClient(espClient);
+CRGB leds[NUM_LEDS];
+
+
+
+void setup() {
+  Serial.begin(115200);
+  timeClient.begin();
+
+  // setup environments
+  setup_mode();
+  setup_fastLED();
+  setup_wifi();
+  setup_mqtt();
+
+  //Send online state
+  mqtt_publish_state();
+}
+
+void setup_mode()
+{
+  Color color;
+  color.red = 200;
+  color.green = 200;
+  color.blue = 200;
+
+  state.mode = 'S';
+  state.brightness = 100;
+  state.speed = 100;
+  state.color = color;
+}
+
+void setup_fastLED()
+{
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+  Serial.println("FastLED activated!");
+}
+
+void setup_wifi() {
+  Serial.println("Connecting to WiFi: ");
+  Serial.print(h_wifi_ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected, IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void setup_mqtt() {
+  Serial.println("Setting up MQTT: ");
+  Serial.println(MQTT_HOST);
+  pubSubClient.setServer(MQTT_HOST, 1883);
+  pubSubClient.setCallback(callback);
+  Serial.println("Setup done MQTT");
+}
+
+void connect_mqtt() {
+  Serial.println("Connecting to MQTT: ");
+  Serial.println(MQTT_HOST);
+
+  if (!pubSubClient.connected()) {
+    Serial.println("MQTT connecting");
+    while (!pubSubClient.connected()) {
+      pubSubClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD);
+      delay(1000);
+      Serial.print("-");
+    }
+
+    //Subscribe to topic
+    pubSubClient.subscribe(commandTopic.c_str());
+    pubSubClient.subscribe(requestTopic.c_str());
+
+    Serial.println("");
+  }
+  Serial.println("MQTT Connected");
+}
+
+void mqtt_publish_state() {  
+  timeClient.update();
+  DynamicJsonDocument pubdoc(1024);
+  String pubJson;
+
+  pubdoc["timestamp"] = timeClient.getEpochTime();
+  pubdoc["mode"] = state.mode;
+  pubdoc["speed"] = state.speed;
+  pubdoc["color"]["r"] = state.color.red;
+  pubdoc["color"]["g"] = state.color.green;
+  pubdoc["color"]["b"] = state.color.blue;
+
+  serializeJson(pubdoc, pubJson);
+
+  pubSubClient.publish(pubTopic.c_str(), pubJson.c_str());
+
+  Serial.println();
+  Serial.println("Pushed State to topic:");
+  Serial.println(pubTopic);
+  Serial.println();
+}
+
+// On arriving message:
+void callback(char* topic, byte* message, unsigned int length) {
+  Serial.println("---------------------------------------");
+  Serial.print("Message arrived on topic: ");
+  Serial.print(topic);
+
+  String data;
+  for (int i = 0; i < length; i++) {
+    data += (char)message[i];
+  }
+
+  Serial.println("Arrived data: ");
+  Serial.print(data);
+  Serial.println();
+
+  DynamicJsonDocument doc(1024);
+
+  deserializeJson(doc, data);
+
+
+  if (String(topic) == commandTopic)
+  {
+    state.mode = doc["mode"];
+    state.brightness = doc["brightness"];
+    state.speed = doc["speed"];
+    state.color.red = doc["color"]["r"];
+    state.color.green = doc["color"]["g"];
+    state.color.blue = doc["color"]["b"];
+  }
+  else if(String(topic) == requestTopic) {
+    mqtt_publish_state();
+  }
+  else {
+    Serial.println("Error: wrong topic");
+  }  
+
+  Serial.println("---------------------------------------");
+}
+
+void loop() {
+  if(!pubSubClient.connected()) {
+    connect_mqtt();
+  }
+  pubSubClient.loop();
+
+  unsigned long currentMillis = millis();
+  if (currentMillis >= previousMillisMode + state.speed)
+  {
+    previousMillisMode = currentMillis;
+    executeMode();
+  }
+}
+
+void executeMode() {
+  Serial.println(state.mode);
+  Serial.println(state.speed);
+  Serial.println(state.brightness);
+  Serial.println(state.color);
+
+}
