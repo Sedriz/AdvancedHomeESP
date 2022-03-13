@@ -93,7 +93,7 @@ void setup_spiffs()
 void setup_fastLED()
 {
   Serial.println("Setting up FastLED!");
-  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   Serial.println("FastLED activated!");
 }
 
@@ -371,6 +371,10 @@ void executeMode()
   {
     multiStaticColor();
   }
+  else if (state.mode == 8)
+  {
+    starsMode();
+  }
 }
 
 //------------------- Modes ---------------
@@ -507,6 +511,21 @@ void multiStripeMode()
 
 void starsMode()
 {
+  fill_solid(leds, NUM_LEDS, state.colorList[0]);
+
+  for (int i = 0; i < 5; i++) //variable size
+  {
+    int random_integer;
+    int lowest = 1, highest = NUM_LEDS -1;
+    int range = (highest - lowest) + 1;
+    random_integer = lowest + rand() % range;
+
+    leds[random_integer -1] = state.colorList[1];
+    leds[random_integer] = state.colorList[1];
+    leds[random_integer +1] = state.colorList[1];
+  }
+
+  FastLED.show();
 }
 
 void multiStaticColor()
