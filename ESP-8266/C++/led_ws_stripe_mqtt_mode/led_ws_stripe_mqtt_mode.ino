@@ -116,6 +116,7 @@ void setup_mqtt()
   Serial.println(MQTT_HOST);
   pubSubClient.setServer(MQTT_HOST, 1883);
   pubSubClient.setCallback(callback);
+  pubSubClient.setBufferSize(1024);
   Serial.println("Setup done MQTT");
 }
 
@@ -418,7 +419,7 @@ void rainbowMode()
 void meetMode()
 {
   int meetingPoint = state.specialPointList[0];
-  int speed = 15;
+  int speed = 30;
   int zeroToPoint = meetingPoint;
   int lastToPoint = NUM_LEDS - meetingPoint;
 
