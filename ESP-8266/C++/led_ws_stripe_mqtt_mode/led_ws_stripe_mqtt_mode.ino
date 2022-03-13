@@ -7,6 +7,8 @@
 #include <WiFiUdp.h>
 #include <sstream>
 #include <FastLED.h>
+#include <ctime>
+#include <cstdlib>
 #include "local_config.h"
 #include "State.h"
 
@@ -46,7 +48,7 @@ int currentLED = 0;
 //-----------------------------------------------------------
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL); // Vector. Bisher nur vom ertsen genommen. Bei callback auch nur das erste gelsen. Fehler beim LEsen vermutlich nicht richtig einlesen. Color wird jedes mal neu erstellt schaurn wegen destroy
+NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL); //CRGB destroy? not more than 2 colors possible?
 WiFiClient espClient;
 PubSubClient pubSubClient(espClient);
 CRGB leds[NUM_LEDS];
@@ -56,6 +58,7 @@ void setup()
   Serial.begin(19200);
   Serial.println("Setting up!");
   timeClient.begin();
+  srand(time(0));
 
   // setup environments
   setup_mode();
@@ -70,10 +73,10 @@ void setup()
 
 void setup_mode()
 {
-  CRGB color1(5,5,5);
-  CRGB color2(50,0,0);
+  CRGB color1(5, 5, 5);
+  CRGB color2(50, 0, 0);
 
-  state.mode = 'S';
+  state.mode = 'U';
   state.brightness = 100;
   state.speed = 100;
   state.colorList = {color1, color2};
@@ -150,7 +153,7 @@ void mqtt_publish_state()
 
   for (int i = 0; i < state.colorList.size(); i++)
   {
-    pubdoc["colorList"][i]["r"] = state.colorList[i].red; //do
+    pubdoc["colorList"][i]["r"] = state.colorList[i].red; // do
     pubdoc["colorList"][i]["g"] = state.colorList[i].green;
     pubdoc["colorList"][i]["b"] = state.colorList[i].blue;
   }
@@ -246,6 +249,14 @@ void executeMode()
   {
     gradientMode();
   }
+  else if (state.mode == 'B')
+  {
+    blinkMode();
+  }
+  else if (state.mode == 'U')
+  {
+    swipeBlinkMode();
+  }
 }
 
 //------------------- Modes ---------------
@@ -260,20 +271,43 @@ void staticMode() // 83
   }
 }
 
-void gradientMode() //71
+void gradientMode() // 71
+{
+  fill_gradient_RGB(leds, 0, state.colorList[0], NUM_LEDS - 1, state.colorList[1]);
+  FastLED.show();
+}
+
+void blinkMode() // 66
+{
+  if (currentLED != 0)
+  {
+    // int random_integer;
+    // int lowest = 1, highest = state.colorList.size();
+    // int range = (highest - lowest) + 1;
+    // random_integer = lowest + rand() % range;
+    fill_solid(leds, NUM_LEDS, state.colorList[1]);
+    currentLED = 0;
+  }
+  else
+  {
+    fill_solid(leds, NUM_LEDS, state.colorList[0]); // First color
+    currentLED = 1;
+  }
+  FastLED.show();
+}
+
+void swipeBlinkMode() // 85
 {
   if (currentLED < (sizeof(leds) / sizeof(*leds)))
   {
-    fill_gradient_RGB(leds, 0, 
-      state.colorList[0], NUM_LEDS-1, state.colorList[1]
-    );
-    FastLED.show();
+    leds[currentLED] = state.colorList[1];
     currentLED++;
   }
-}
-
-void blinkMode()
-{
+  else {
+    fill_solid(leds, NUM_LEDS, state.colorList[0]);
+    currentLED = 0;
+  }
+  FastLED.show();
 }
 
 void rainbowMode()
@@ -313,6 +347,6 @@ void multistripeMode()
 {
 }
 
-void startsMode()
+void starsMode()
 {
 }
