@@ -35,7 +35,7 @@ const char* MQTT_PASSWORD = h_mqtt_password;
 // Topic:
 const String commandTopic = "device/" +  deviceID + "/command";
 const String requestTopic = "device/" +  deviceID + "/request";
-const String pubTopic = "main/" + deviceID + "/1";
+const String pubTopic = "main/" + deviceID + "/1"; //Incomming topic id
 
 State state;
 
@@ -54,16 +54,18 @@ CRGB leds[NUM_LEDS];
 
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(19200);
+  Serial.println("Setting up!");
   timeClient.begin();
 
   // setup environments
   setup_mode();
-  setup_fastLED();
+  //setup_fastLED();
   setup_wifi();
   setup_mqtt();
 
   //Send online state
+  delay(1000);
   mqtt_publish_state();
 }
 
@@ -76,7 +78,7 @@ void setup_mode()
 
   state.mode = 'S';
   state.brightness = 100;
-  state.speed = 100;
+  state.speed = 5000;
   state.color = color;
 }
 
@@ -129,6 +131,10 @@ void connect_mqtt() {
 }
 
 void mqtt_publish_state() {  
+  if(!pubSubClient.connected()) {
+    connect_mqtt();
+  }
+  
   timeClient.update();
   DynamicJsonDocument pubdoc(1024);
   String pubJson;
@@ -207,6 +213,35 @@ void executeMode() {
   Serial.println(state.mode);
   Serial.println(state.speed);
   Serial.println(state.brightness);
-  Serial.println(state.color);
+
+}
+
+//------------------- Modes ---------------
+
+void staticMode() {
+
+}
+
+void blinkMode() {
+
+}
+
+void rainbowMode() {
+
+}
+
+void meetMode() {
+
+}
+
+void singleStripeMode() {
+
+}
+
+void multistripeMode() {
+
+}
+
+void startsMode() {
 
 }
