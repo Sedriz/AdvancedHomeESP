@@ -81,7 +81,7 @@ void setup()
 }
 
 void setupModeMap() {
-  modeMap[1] = &staticMode;
+  modeMap[1] = &multiStaticColor;
   modeMap[2] = &gradientMode;
   modeMap[3] = &blinkMode;
   modeMap[4] = &swipeBlinkMode;
@@ -90,7 +90,6 @@ void setupModeMap() {
   modeMap[7] = &resetStripeForMode;
   modeMap[8] = &singleStripeMode;
   modeMap[9] = &starsMode;
-  modeMap[10] = &multiStaticColor;
 }
 
 void setup_spiffs()
@@ -361,16 +360,6 @@ void loop()
 
 //------------------- Modes ---------------
 
-void staticMode()
-{
-  if (currentLED[0] < NUM_LEDS)
-  {
-    leds[(int)currentLED[0]] = state.colorVector[0];
-    FastLED.show();
-    currentLED[0]++;
-  }
-}
-
 void gradientMode()
 {
   fill_gradient_RGB(leds, 0, state.colorVector[0], NUM_LEDS - 1, state.colorVector[1]);
@@ -414,7 +403,7 @@ void swipeBlinkMode()
 void rainbowMode()
 {
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CHSV(i - ((int)currentLED[0] * 2), 255, 50); /* Saturation + brightness to var */ 
+    leds[i] = CHSV(i - ((int)currentLED[0] * 2), state.additionalNumberVector[0], state.additionalNumberVector[1]); 
   }
 
   if (((int)currentLED[0]) < 255)
@@ -424,8 +413,6 @@ void rainbowMode()
   else {
     currentLED[0] = 0;
   }
-  
-
   FastLED.show();
 }
 
@@ -479,7 +466,7 @@ void resetStripeForMode()
 
 void singleStripeMode()
 {
-  int stripeSize = 10;
+  int stripeSize = state.additionalNumberVector[0];
   int currentStripeTail = currentLED[0] - stripeSize;
   if (currentLED[0] < (NUM_LEDS + stripeSize))
   {
@@ -509,7 +496,7 @@ void starsMode()
 {
   fill_solid(leds, NUM_LEDS, state.colorVector[0]);
 
-  for (int i = 0; i < 5; i++) //variable size
+  for (int i = 0; i < state.additionalNumberVector[0]; i++)
   {
     int random_integer;
     int lowest = 1, highest = NUM_LEDS -1;
