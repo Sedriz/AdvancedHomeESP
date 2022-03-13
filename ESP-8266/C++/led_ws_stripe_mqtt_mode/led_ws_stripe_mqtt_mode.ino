@@ -75,10 +75,15 @@ void setup_mode()
   color.green = 5;
   color.blue = 5;
 
-  state.mode = 'S';
+  Color color2;
+  color.red = 5;
+  color.green = 0;
+  color.blue = 0;
+
+  state.mode = 'G';
   state.brightness = 100;
   state.speed = 100;
-  state.colorList = {color};
+  state.colorList = {color, color2};
 }
 
 void setup_fastLED()
@@ -194,12 +199,17 @@ void callback(char *topic, byte *message, unsigned int length)
     state.brightness = doc["brightness"];
     state.speed = doc["speed"];
 
-    Color color;
-    color.red = doc["color"]["r"]; // get color list
-    color.green = doc["color"]["g"];
-    color.blue = doc["color"]["b"];
+    state.colorList = {};
 
-    state.colorList = {color};
+    for (int i = 0; i < doc["colorList"].size(); i++)
+    {
+      Color color;
+      color.red = doc["colorList"][0]["r"];
+      color.green = doc["colorList"][0]["g"];
+      color.blue = doc["colorList"][0]["b"];
+
+      state.colorList.push_back(color);
+    }
 
     currentLED = 0;
   }
@@ -261,11 +271,13 @@ void staticMode() // 83
   }
 }
 
-void gradientMode()
+void gradientMode() //71
 {
   if (currentLED < (sizeof(leds) / sizeof(*leds)))
   {
-    fill_gradient(leds, 0, CHSV(0, 25, 25), NUM_LEDS - 1, CHSV(13, 25, 25), SHORTEST_HUES);
+    fill_gradient_RGB(leds, 0, 
+      CRGB(255,0,0), NUM_LEDS-1, CRGB(0,255,0)
+    );
     FastLED.show();
     currentLED++;
   }
