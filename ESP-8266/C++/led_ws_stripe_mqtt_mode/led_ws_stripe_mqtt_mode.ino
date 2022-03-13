@@ -70,20 +70,13 @@ void setup()
 
 void setup_mode()
 {
-  Color color;
-  color.red = 5;
-  color.green = 5;
-  color.blue = 5;
+  CRGB color1(5,5,5);
+  CRGB color2(50,0,0);
 
-  Color color2;
-  color.red = 5;
-  color.green = 0;
-  color.blue = 0;
-
-  state.mode = 'G';
+  state.mode = 'S';
   state.brightness = 100;
   state.speed = 100;
-  state.colorList = {color, color2};
+  state.colorList = {color1, color2};
 }
 
 void setup_fastLED()
@@ -155,12 +148,12 @@ void mqtt_publish_state()
   pubdoc["mode"] = state.mode;
   pubdoc["speed"] = state.speed;
 
-  for (int i = 0; i < state.colorList.size(); i++)
-  {
-    pubdoc["colorList"][i]["r"] = state.colorList[i].red;
-    pubdoc["colorList"][i]["g"] = state.colorList[i].green;
-    pubdoc["colorList"][i]["b"] = state.colorList[i].blue;
-  }
+  // for (int i = 0; i < state.colorList.size(); i++)
+  // {
+  //   pubdoc["colorList"][i]["r"] = state.colorList[i].red; //do
+  //   pubdoc["colorList"][i]["g"] = state.colorList[i].green;
+  //   pubdoc["colorList"][i]["b"] = state.colorList[i].blue;
+  // }
 
   serializeJson(pubdoc, pubJson);
 
@@ -203,11 +196,7 @@ void callback(char *topic, byte *message, unsigned int length)
 
     for (int i = 0; i < doc["colorList"].size(); i++)
     {
-      Color color;
-      color.red = doc["colorList"][0]["r"];
-      color.green = doc["colorList"][0]["g"];
-      color.blue = doc["colorList"][0]["b"];
-
+      CRGB color(doc["colorList"][0]["r"], doc["colorList"][0]["g"], doc["colorList"][0]["b"]);
       state.colorList.push_back(color);
     }
 
@@ -265,7 +254,7 @@ void staticMode() // 83
 {
   if (currentLED < (sizeof(leds) / sizeof(*leds)))
   {
-    leds[currentLED] = CRGB(state.colorList[0].red, state.colorList[0].green, state.colorList[0].blue);
+    leds[currentLED] = state.colorList[0];
     FastLED.show();
     currentLED++;
   }
@@ -276,7 +265,7 @@ void gradientMode() //71
   if (currentLED < (sizeof(leds) / sizeof(*leds)))
   {
     fill_gradient_RGB(leds, 0, 
-      CRGB(255,0,0), NUM_LEDS-1, CRGB(0,255,0)
+      state.colorList[0], NUM_LEDS-1, state.colorList[1]
     );
     FastLED.show();
     currentLED++;
@@ -304,12 +293,12 @@ void singleStripeMode() // 49
   {
     if (currentLED < ledsSize)
     {
-      leds[currentLED] = CRGB(state.colorList[0].red, state.colorList[0].green, state.colorList[0].blue);
+      leds[currentLED] = state.colorList[0];
     }
 
     if (currentStripeTail > 0)
     {
-      leds[currentStripeTail] = CRGB::Black;
+      leds[currentStripeTail] = state.colorList[1];
     }
     currentLED++;
     FastLED.show();

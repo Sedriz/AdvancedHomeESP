@@ -1,4 +1,4 @@
-#include "Color.h"
+#include <FastLED.h>
 #include <vector>
 #include <iostream>
 
@@ -10,7 +10,7 @@ public:
     char mode;
     int speed;
     int brightness;
-    std::vector<Color> colorList;
-    std::vector<Color>::iterator it;
+    std::vector<CRGB> colorList;
+    std::vector<CRGB>::iterator it;
 };
 
