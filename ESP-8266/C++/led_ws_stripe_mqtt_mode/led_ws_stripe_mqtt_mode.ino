@@ -188,7 +188,7 @@ void defaultState() {
   state.mode = 1;
   state.brightness = 100;
   state.speed = 50;
-  state.colorList = {color1, color2};
+  state.colorVector = {color1, color2};
 }
 
 void mqtt_publish_state()
@@ -242,16 +242,16 @@ String createJSON()
   pubdoc["mode"] = state.mode;
   pubdoc["speed"] = state.speed;
 
-  for (int i = 0; i < state.specialPointList.size(); i++)
+  for (int i = 0; i < state.additionalNumberVector.size(); i++)
   {
-    pubdoc["specialPointList"][i] = state.specialPointList[i];
+    pubdoc["additionalNumberVector"][i] = state.additionalNumberVector[i];
   }
 
-  for (int i = 0; i < state.colorList.size(); i++)
+  for (int i = 0; i < state.colorVector.size(); i++)
   {
-    pubdoc["colorList"][i]["r"] = state.colorList[i].red;
-    pubdoc["colorList"][i]["g"] = state.colorList[i].green;
-    pubdoc["colorList"][i]["b"] = state.colorList[i].blue;
+    pubdoc["colorVector"][i]["r"] = state.colorVector[i].red;
+    pubdoc["colorVector"][i]["g"] = state.colorVector[i].green;
+    pubdoc["colorVector"][i]["b"] = state.colorVector[i].blue;
   }
 
   serializeJson(pubdoc, pubJson);
@@ -268,19 +268,19 @@ void readJSON(String data)
   state.brightness = doc["brightness"];
   state.speed = doc["speed"];
 
-  state.specialPointList = {};
+  state.additionalNumberVector = {};
 
-  for (int i = 0; i < doc["specialPointList"].size(); i++)
+  for (int i = 0; i < doc["additionalNumberVector"].size(); i++)
   {
-    state.specialPointList.push_back(doc["specialPointList"][i]);
+    state.additionalNumberVector.push_back(doc["additionalNumberVector"][i]);
   }
 
-  state.colorList = {};
+  state.colorVector = {};
 
-  for (int i = 0; i < doc["colorList"].size(); i++)
+  for (int i = 0; i < doc["colorVector"].size(); i++)
   {
-    CRGB color(doc["colorList"][i]["r"], doc["colorList"][i]["g"], doc["colorList"][i]["b"]);
-    state.colorList.push_back(color);
+    CRGB color(doc["colorVector"][i]["r"], doc["colorVector"][i]["g"], doc["colorVector"][i]["b"]);
+    state.colorVector.push_back(color);
   }
 }
 
@@ -387,7 +387,7 @@ void staticMode()
 {
   if (currentLED[0] < NUM_LEDS)
   {
-    leds[(int)currentLED[0]] = state.colorList[0];
+    leds[(int)currentLED[0]] = state.colorVector[0];
     FastLED.show();
     currentLED[0]++;
   }
@@ -395,7 +395,7 @@ void staticMode()
 
 void gradientMode()
 {
-  fill_gradient_RGB(leds, 0, state.colorList[0], NUM_LEDS - 1, state.colorList[1]);
+  fill_gradient_RGB(leds, 0, state.colorVector[0], NUM_LEDS - 1, state.colorVector[1]);
   FastLED.show();
 }
 
@@ -404,15 +404,15 @@ void blinkMode()
   if (currentLED[0] != 0)
   {
     int random_integer;
-    int lowest = 1, highest = state.colorList.size();
+    int lowest = 1, highest = state.colorVector.size();
     int range = (highest - lowest) + 1;
     random_integer = lowest + rand() % range;
-    fill_solid(leds, NUM_LEDS, state.colorList[random_integer]);
+    fill_solid(leds, NUM_LEDS, state.colorVector[random_integer]);
     currentLED[0] = 0;
   }
   else
   {
-    fill_solid(leds, NUM_LEDS, state.colorList[0]); // First color
+    fill_solid(leds, NUM_LEDS, state.colorVector[0]); // First color
     currentLED[0] = 1;
   }
   FastLED.show();
@@ -422,12 +422,12 @@ void swipeBlinkMode()
 {
   if (currentLED[0] < (sizeof(leds) / sizeof(*leds)))
   {
-    leds[(int)currentLED[0]] = state.colorList[1];
+    leds[(int)currentLED[0]] = state.colorVector[1];
     currentLED[0]++;
   }
   else
   {
-    fill_solid(leds, NUM_LEDS, state.colorList[0]);
+    fill_solid(leds, NUM_LEDS, state.colorVector[0]);
     currentLED[0] = 0;
   }
   FastLED.show();
@@ -453,7 +453,7 @@ void rainbowMode()
 
 void meetMode()
 {
-  int meetingPoint = state.specialPointList[0];
+  int meetingPoint = state.additionalNumberVector[0];
   int speed = 30;
   int zeroToPoint = meetingPoint;
   int lastToPoint = NUM_LEDS - meetingPoint;
@@ -471,7 +471,7 @@ void meetMode()
 
   if (currentZeroToPoint <= meetingPoint)
   {
-    leds[currentZeroToPoint] = state.colorList[0];
+    leds[currentZeroToPoint] = state.colorVector[0];
     currentLED[0] = currentLED[0] + speedZeroToPoint;
   }
   else
@@ -481,7 +481,7 @@ void meetMode()
 
   if (currentLastToPoint > meetingPoint)
   {
-    leds[currentLastToPoint] = state.colorList[1];
+    leds[currentLastToPoint] = state.colorVector[1];
     currentLED[1] = currentLED[1] - speedLastToPoint;
   }
   else
@@ -496,7 +496,7 @@ void resetStripeForMode()
 {
   currentLED[0] = 0;
   currentLED[1] = NUM_LEDS;
-  fill_solid(leds, NUM_LEDS, state.colorList[2]);
+  fill_solid(leds, NUM_LEDS, state.colorVector[2]);
 }
 
 void singleStripeMode()
@@ -507,12 +507,12 @@ void singleStripeMode()
   {
     if (currentLED[0] < NUM_LEDS)
     {
-      leds[(int)currentLED[0]] = state.colorList[0];
+      leds[(int)currentLED[0]] = state.colorVector[0];
     }
 
     if (currentStripeTail > 0)
     {
-      leds[currentStripeTail] = state.colorList[1];
+      leds[currentStripeTail] = state.colorVector[1];
     }
     currentLED[0]++;
     FastLED.show();
@@ -529,7 +529,7 @@ void multiStripeMode()
 
 void starsMode()
 {
-  fill_solid(leds, NUM_LEDS, state.colorList[0]);
+  fill_solid(leds, NUM_LEDS, state.colorVector[0]);
 
   for (int i = 0; i < 5; i++) //variable size
   {
@@ -538,9 +538,9 @@ void starsMode()
     int range = (highest - lowest) + 1;
     random_integer = lowest + rand() % range;
 
-    leds[random_integer -1] = state.colorList[1];
-    leds[random_integer] = state.colorList[1];
-    leds[random_integer +1] = state.colorList[1];
+    leds[random_integer -1] = state.colorVector[1];
+    leds[random_integer] = state.colorVector[1];
+    leds[random_integer +1] = state.colorVector[1];
   }
 
   FastLED.show();
@@ -550,18 +550,18 @@ void multiStaticColor()
 {
   if (currentLED[0] < NUM_LEDS)
   {
-    if (currentLED[0] < state.specialPointList[0])
+    if (currentLED[0] < state.additionalNumberVector[0])
     {
-      leds[(int)currentLED[0]] = state.colorList[0];
+      leds[(int)currentLED[0]] = state.colorVector[0];
     }
     
-    for (int i = 0; i < state.specialPointList.size(); i++)
+    for (int i = 0; i < state.additionalNumberVector.size(); i++)
     {
-      int point = state.specialPointList[i];
-      int nextPoint = state.specialPointList[i+1];
+      int point = state.additionalNumberVector[i];
+      int nextPoint = state.additionalNumberVector[i+1];
       if (currentLED[0] >= point && currentLED[0] < nextPoint)
       {
-        leds[(int)currentLED[0]] = state.colorList[i+1];
+        leds[(int)currentLED[0]] = state.colorVector[i+1];
         break;
       }
     }
