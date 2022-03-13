@@ -353,13 +353,17 @@ void executeMode()
   {
     meetMode();
   }
+  else if (state.mode == 7)
+  {
+    multiStaticColor();
+  }
 }
 
 //------------------- Modes ---------------
 
 void staticMode()
 {
-  if (currentLED[0] < (sizeof(leds) / sizeof(*leds)))
+  if (currentLED[0] < NUM_LEDS)
   {
     leds[(int)currentLED[0]] = state.colorList[0];
     FastLED.show();
@@ -493,4 +497,25 @@ void starsMode()
 
 void multiStaticColor()
 {
+  if (currentLED[0] < NUM_LEDS)
+  {
+    if (currentLED[0] < state.specialPointList[0])
+    {
+      leds[(int)currentLED[0]] = state.colorList[0];
+    }
+    
+    for (int i = 0; i < state.specialPointList.size(); i++)
+    {
+      int point = state.specialPointList[i];
+      int nextPoint = state.specialPointList[i+1];
+      if (currentLED[0] >= point && currentLED[0] < nextPoint)
+      {
+        leds[(int)currentLED[0]] = state.colorList[i+1];
+        break;
+      }
+    }
+    
+    FastLED.show();
+    currentLED[0]++;
+  }
 }
