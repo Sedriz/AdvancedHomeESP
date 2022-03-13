@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include "local_config.h"
 #include "State.h"
+#include <FS.h>
 
 //-----------------------Constants----------------------------
 
@@ -45,6 +46,9 @@ State state;
 unsigned long previousMillisMode = 0;
 double currentLED[] = {0, 0, 0, 0, 0};
 
+const char *filename = "/savedState.json";
+
+
 //-----------------------------------------------------------
 
 WiFiUDP ntpUDP;
@@ -61,6 +65,7 @@ void setup()
   srand(time(0));
 
   // setup environments
+  setup_spiffs();
   setup_mode();
   setup_fastLED();
   setup_wifi();
@@ -73,6 +78,8 @@ void setup()
 
 void setup_mode()
 {
+  readSavedState();
+
   CRGB color1(170, 80, 0);
   CRGB color2(50, 0, 0);
 
@@ -80,6 +87,20 @@ void setup_mode()
   state.brightness = 100;
   state.speed = 50;
   state.colorList = {color1, color2};
+}
+
+void setup_spiffs()
+{
+  bool success = SPIFFS.begin();
+  if (success)
+  {
+    Serial.println("File system mounted with success");
+  }
+  else
+  {
+    Serial.println("Error mounting the file system");
+    return;
+  }
 }
 
 void setup_fastLED()
@@ -136,6 +157,24 @@ void connect_mqtt()
   Serial.println("MQTT Connected");
 }
 
+void readSavedState()
+{
+  File file = SPIFFS.open(filename, "r");
+
+  if (!file)
+  {
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+
+  while (file.available()) {
+ 
+    Serial.write(file.read());
+  }
+ 
+  file.close();
+}
+
 void mqtt_publish_state()
 {
   if (!pubSubClient.connected())
@@ -171,6 +210,31 @@ void mqtt_publish_state()
   Serial.println("Pushed State to topic:");
   Serial.println(pubTopic);
   Serial.println();
+}
+
+void writeToFile()
+{
+  File file = SPIFFS.open(filename, "w");
+
+  if (!file)
+  {
+    Serial.println("Error opening file for writing");
+    return;
+  }
+
+  int bytesWritten = file.print("TEST SPIFFS");
+
+  if (bytesWritten > 0)
+  {
+    Serial.println("File was written");
+    Serial.println(bytesWritten);
+  }
+  else
+  {
+    Serial.println("File write failed");
+  }
+
+  file.close();
 }
 
 // On arriving message:
@@ -220,6 +284,8 @@ void callback(char *topic, byte *message, unsigned int length)
     currentLED[2] = 0;
     currentLED[3] = 0;
     currentLED[4] = 0;
+
+    writeToFile();
   }
   else if (String(topic) == requestTopic)
   {
