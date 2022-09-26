@@ -79,7 +79,7 @@ void connect_mqtt() {
 
 // { "timestamp": 342432, "location": "location", "isMotionEvent": false }
 void mqtt_publish() {
-  const char* data;
+  std::string data;
   DynamicJsonDocument doc(512);
 
   doc["timestamp"] = timeClient.getEpochTime();
@@ -88,10 +88,10 @@ void mqtt_publish() {
 
   serializeJson(doc, data);
 
-  pubSubClient.publish(pubTopic.c_str(), data);
+  pubSubClient.publish(pubTopic.c_str(), data.c_str());
 
   Serial.println("Published the following message:");
-  Serial.println(data);
+  Serial.println(data.c_str());
 }
 
 void loop() {

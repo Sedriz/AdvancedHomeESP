@@ -476,7 +476,11 @@ void readJSON(String data)
 
   for (int i = 0; i < doc["colorVector"].size(); i++)
   {
-    CRGB color(doc["colorVector"][i]["r"], doc["colorVector"][i]["g"], doc["colorVector"][i]["b"]);
+    uint8_t r = doc["colorVector"][i]["r"];
+    uint8_t g = doc["colorVector"][i]["g"];
+    uint8_t b = doc["colorVector"][i]["b"];
+
+    CRGB color(r, g, b);
     state.colorVector.push_back(color);
   }
 }

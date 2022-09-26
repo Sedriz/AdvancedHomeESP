@@ -1,19 +1,19 @@
 // Wifi:
-#define h_wifi_ssid "<Your Network SSID>"
-#define h_wifi_password "<Your Network Password>"
+#define h_wifi_ssid "PowerStaack"
+#define h_wifi_password "Staackdasinternet"
 
 // MQTT:
-#define h_mqttbroker_host "<The IP of your MQTT broker>"
-#define h_mqtt_user "<The Username to connect to your MQTT broker>"
-#define h_mqtt_password "<The Password to conenct to your MQTT broker>"
+#define h_mqttbroker_host "192.168.178.109"
+#define h_mqtt_user "mosquitto"
+#define h_mqtt_password "qeFgt?aFWVW,KF\"tyy4H/J6M"
 
 //Device:
-#define h_device_id "<Your Device ID. You have to register you device to (Smartboot) to get your ID>"
-#define h_location "<The location your Device is registered in>"
+#define h_device_id "12"
+#define h_location "Partyroom"
 
 //Stripe:
-#define LED_PIN 4 // The output pin where your LED-Stripe is connected. 4 -> D2
-#define NUM_LEDS 256 //The length of your Stripe 
+#define LED_PIN 5 // The output pin where your LED-Stripe is connected. 4 -> D2
+#define NUM_LEDS 30 //The length of your Stripe 
 #define LED_TYPE WS2813 // The model of your LED-Stripe
 #define COLOR_ORDER GRB // RGB / GRB
 
